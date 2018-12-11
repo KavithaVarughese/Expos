@@ -1,0 +1,29 @@
+//load init program
+
+loadi(65,7);
+loadi(66,8);
+
+//load int = 10 .. halt program
+loadi(22,35);
+loadi(23,36);
+
+//load exception handler
+loadi(2,15);
+loadi(3,16);
+
+//setting up page table for init
+
+PTBR = PAGE_TABLE_BASE;
+PTLR = 3;  //size of page table
+
+[PTBR+0] = 65; //code pages
+[PTBR+1] = "0100"; //auxillary information
+[PTBR+2] = 66;
+[PTBR+3] = "0100";
+[PTBR+4] = 76; //stack page
+[PTBR+5] = "0110";
+
+[76*512] = 0; //stack hold the ip address of the next instructions.. this case its 0
+SP = 2*512; //size of stack
+
+ireturn; //go to the instruction in unprivileged mode
