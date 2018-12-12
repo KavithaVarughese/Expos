@@ -1,2 +1,18 @@
-print "TIMER";
+//setting KPTR assuming stack is empty
+[PROCESS_TABLE + ( [SYSTEM_STATUS_TABLE + 1] * 16 ) + 13] = SP;
+
+//reinitialising SP to userAreaPage
+SP = [PROCESS_TABLE + ([SYSTEM_STATUS_TABLE + 1] * 16) + 11] * 512 - 1 ;
+
+//saving the user's contents 
+backup;
+
+print "Timer";
+
+//get user's contents back
+restore;
+
+// set SP back to KPTR 
+SP = [PROCESS_TABLE + ([SYSTEM_STATUS_TABLE + 1] * 16) + 13];
+
 ireturn;

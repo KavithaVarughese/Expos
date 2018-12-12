@@ -45,6 +45,14 @@ PTLR = 10;  //size of page table
 [PTBR+18] = 77;
 [PTBR+19] = "0110";
 
+//setting up process table for init
+[PROCESS_TABLE + 1] = 0; //PID
+[PROCESS_TABLE + 11] = 80; //userArea Page
+
+//setting system status table of init
+[SYSTEM_STATUS_TABLE + 1] = 0;
+
+
 [76*512] = [65*512 + 1]; //stack hold the ip address of the next instructions.. this case its 0
 SP = 8*512; //size of stack
 
