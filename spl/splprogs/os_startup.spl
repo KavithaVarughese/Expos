@@ -1,3 +1,7 @@
+//load timer interrupt
+loadi(4,17);
+loadi(5,18);
+
 //load library
 loadi(63,13);
 loadi(64,14);
