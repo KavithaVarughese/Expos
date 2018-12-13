@@ -7,7 +7,7 @@ SP = [PROCESS_TABLE + ([SYSTEM_STATUS_TABLE + 1] * 16) + 11] * 512 - 1 ;
 //saving the user's contents 
 backup;
 
-print "Timer";
+print [SYSTEM_STATUS_TABLE + 1];
 
 //get user's contents back
 restore;
