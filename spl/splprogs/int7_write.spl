@@ -1,0 +1,53 @@
+//change mode flag
+[PROCESS_TABLE + ([SYSTEM_STATUS_TABLE + 1] * 16) + 9] = 5;
+
+//save the userSP
+alias userSP R0;
+userSP = SP;
+
+//switch from user to kernel stack
+//save UPTR 
+[PROCESS_TABLE + ([SYSTEM_STATUS_TABLE + 1] * 16) + 13] = SP;
+
+//assign SP to kernel stack technically beginning of userAreaPage
+SP = [PROCESS_TABLE + ([SYSTEM_STATUS_TABLE + 1] * 16) + 11] *  512 - 1;
+
+//backup is already done by the compiler
+
+//arguments are stored in the userSP in logical locations
+//To access them address translatio has to take place
+//address translation : [PTBR + (logical/512) * 2] * 512 + (logical % 512)
+//arrangement in user stack : -1 :- output ; -2 :- Arg 3 ; -3 :- Arg 2 ; -4 :- Arg 1  
+alias fileDescriptor R1 ; // Argument 1
+fileDescriptor = [[PTBR + ((userSP - 4) / 512) * 2] * 512 + ((userSP - 4) % 512)];
+
+//check whether file descriptor is correct
+if (fileDescriptor != -2) then
+
+ //save the return value in the logical address, so again address translation
+ //failure, so return value is -1
+ [[PTBR + ((userSP - 1) / 512) * 2] * 512 + ((userSP -1) % 512)] = -1; 
+
+else
+
+ //print the word
+ //get the word from Arg 3
+ alias word R1;
+ word = [[PTBR + ((userSP - 3) / 512) * 2] * 512 + ((userSP - 3) % 512)];
+ 
+ print word;
+
+ //successful , so return value is 0
+ [[PTBR + ((userSP - 1) / 512) * 2] * 512 + ((userSP -1) % 512)] = 0; 
+endif;
+
+//change control back to user, this SP is changed from KPTR to userSP
+SP = userSP;
+
+//change mode back to 0
+[PROCESS_TABLE + ([SYSTEM_STATUS_TABLE + 1] * 16) + 9] = 0;
+
+ireturn;
+
+
+

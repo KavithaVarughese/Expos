@@ -1,3 +1,7 @@
+//load int7_write
+loadi(16,29);
+loadi(17,30);
+
 //load timer interrupt
 loadi(4,17);
 loadi(5,18);
