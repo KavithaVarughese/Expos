@@ -23,6 +23,9 @@ loadi(23,36);
 loadi(2,15);
 loadi(3,16);
 
+//even number
+loadi(83,70);
+
 //setting up page table for init
 
 PTBR = PAGE_TABLE_BASE+20; //PTBR for init process
@@ -61,5 +64,44 @@ PTLR = 10;  //size of page table
 //Note the PTBR and PTLR are already initialised on line 67 and 68
 
 [76*512] = [65*512 + 1]; //stack hold the ip address of the next instructions of init process
+
+//odd numbers
+
+PTBR = PAGE_TABLE_BASE+40; //PTBR for init process
+PTLR = 10;  //size of page table
+
+[PTBR+0] = 63; //library
+[PTBR+1] = "0100"; //auxillary information
+[PTBR+2] = 64;
+[PTBR+3] = "0100";
+[PTBR+4] = -1; //heap pages
+[PTBR+5] = "0000";
+[PTBR+6] = -1;
+[PTBR+7] = "0000";
+[PTBR+8] = 83; //code pages
+[PTBR+9] = "0100";
+[PTBR+10] = -1;
+[PTBR+11] = "0100";
+[PTBR+12] = -1;
+[PTBR+13] = "0100";
+[PTBR+14] = -1;
+[PTBR+15] = "0100";
+[PTBR+16] = 84; //stack pages
+[PTBR+17] = "0110";
+[PTBR+18] = -1;
+[PTBR+19] = "0110";
+
+//setting up process table for init
+[PROCESS_TABLE + 16*2 + 1] = 2; //PID
+[PROCESS_TABLE + 16*2 + 4] = CREATED;
+[PROCESS_TABLE + 16*2 + 11] = 85; //userArea Page
+[PROCESS_TABLE + 16*2 + 12] = 0;
+[PROCESS_TABLE + 16*2 + 13] = 8*512;
+[PROCESS_TABLE + 16*2 + 14] = PTBR;
+[PROCESS_TABLE + 16*2 + 15] = PTLR;
+
+//Note the PTBR and PTLR are already initialised on line 67 and 68
+
+[84*512] = [83*512 + 1]; //stack hold the ip address of the next instructions of init process
 
 return;
