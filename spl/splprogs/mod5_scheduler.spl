@@ -1,0 +1,64 @@
+alias currentPid R0;
+currentPid = [SYSTEM_STATUS_TABLE + 1];
+
+multipush(BP); //BP of the current process
+
+alias currentProcessTable R1;
+currentProcessTable = PROCESS_TABLE + 16 * currentPid;
+
+//making necessary changes
+[currentProcessTable + 12] = SP % 512;
+[currentProcessTable + 14] = PTBR;
+[currentProcessTable + 15] = PTLR;
+
+alias counter R5;
+counter = 1;
+alias i R2;
+i = currentPid + 1;
+
+alias newPid R4;
+
+while (counter < 16) do
+ if([PROCESS_TABLE + i * 16 + 4] == CREATED || [PROCESS_TABLE + 16 * i + 4] == READY) then
+  newPid = [PROCESS_TABLE + 16*i + 1];
+  break;
+ else
+  i = (i+1)%16;
+  if (i == 0) then
+   i = 1;
+  endif;
+ endif;
+ counter = counter + 1;
+endwhile;
+
+if (counter == 16) then
+ newPid = 0; // this variable if needed incase of forks
+endif;
+
+alias newProcessTable R3;
+newProcessTable = PROCESS_TABLE + 16 * newPid;
+
+//making official changes
+SP = [newProcessTable + 11] * 512 + [newProcessTable + 12]; //userAreaPage*512 + KPTR
+PTBR = [newProcessTable + 14];
+PTLR = [newProcessTable + 15];
+
+[SYSTEM_STATUS_TABLE + 1] = newPid;
+
+//no user content to restore if the process is just CREATED, as it has never been used. so jump 
+if ([newProcessTable + 4] == CREATED) then
+ SP = [newProcessTable + 13];
+ [newProcessTable + 4] = RUNNING;
+ [newProcessTable + 9] = 0;
+ ireturn;
+endif;
+
+[newProcessTable + 4] = RUNNING;
+
+multipop(BP);
+
+return;
+
+
+
+

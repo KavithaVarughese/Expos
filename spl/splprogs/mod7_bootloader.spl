@@ -23,6 +23,10 @@ loadi(23,36);
 loadi(2,15);
 loadi(3,16);
 
+//load module 5 .. scheduler
+loadi(50,63);
+loadi(51,64);
+
 //even number
 loadi(83,70);
 
@@ -103,5 +107,19 @@ PTLR = 10;  //size of page table
 //Note the PTBR and PTLR are already initialised on line 67 and 68
 
 [84*512] = [83*512 + 1]; //stack hold the ip address of the next instructions of init process
+
+[PROCESS_TABLE + 16*3 + 4] = TERMINATED;
+[PROCESS_TABLE + 16*4 + 4] = TERMINATED;
+[PROCESS_TABLE + 16*5 + 4] = TERMINATED;
+[PROCESS_TABLE + 16*6 + 4] = TERMINATED;
+[PROCESS_TABLE + 16*7 + 4] = TERMINATED;
+[PROCESS_TABLE + 16*8 + 4] = TERMINATED;
+[PROCESS_TABLE + 16*9 + 4] = TERMINATED;
+[PROCESS_TABLE + 16*10 + 4] = TERMINATED;
+[PROCESS_TABLE + 16*11 + 4] = TERMINATED;
+[PROCESS_TABLE + 16*12 + 4] = TERMINATED;
+[PROCESS_TABLE + 16*13 + 4] = TERMINATED;
+[PROCESS_TABLE + 16*14 + 4] = TERMINATED;
+[PROCESS_TABLE + 16*15 + 4] = TERMINATED;
 
 return;
