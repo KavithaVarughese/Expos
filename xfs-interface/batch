@@ -1,5 +1,5 @@
 load --os ../spl/splprogs/os_startup.xsm
-load --init ../expl/explprogs/oddnum.xsm
+load --init ../expl/explprogs/student.xsm
 load --int=10 ../spl/splprogs/int10_haltprog.xsm
 load --exhandler ../spl/splprogs/int10_haltprog.xsm
 load --library ../expl/library.lib
