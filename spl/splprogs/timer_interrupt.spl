@@ -7,12 +7,46 @@ SP = [PROCESS_TABLE + ([SYSTEM_STATUS_TABLE + 1] * 16) + 11] * 512 - 1 ;
 //saving the user's contents 
 backup;
 
-print "Timer";
+alias currentPid R0;
+currentPid = [SYSTEM_STATUS_TABLE + 1];
 
-//get user's contents back
+alias currentProcessTable R1;
+currentProcessTable = PROCESS_TABLE + 16 * currentPid;
+
+//saving KPTR , PTBR, PTLR and changing state
+[currentProcessTable + 4] = READY;
+[currentProcessTable + 12] = SP % 512;
+[currentProcessTable + 14] = PTBR;
+[currentProcessTable + 15] = PTLR;
+
+//scheduling
+alias newPid R2;
+if (currentPid == 1) then
+ newPid = 0;
+else
+ newPid = 1;
+endif;
+
+alias newProcessTable R3;
+newProcessTable = PROCESS_TABLE + newPid * 16;
+
+//making official changes
+SP = [newProcessTable + 11] * 512 + [newProcessTable + 12]; //userAreaPage * 512 + KPTR
+PTBR = [newProcessTable + 14];
+PTLR = [newProcessTable + 15];
+
+[SYSTEM_STATUS_TABLE + 1] = newPid;
+
+//as for restoring user content, check whether the process is just created or not
+if ([newProcessTable + 4] == CREATED) then
+ [newProcessTable + 4] = RUNNING;
+ SP = [newProcessTable + 13];
+ ireturn;
+endif;
+
+//get user's contents back if the process has already performed once
 restore;
 
-// set SP back to KPTR 
+[PROCESS_TABLE + ([SYSTEM_STATUS_TABLE + 1] * 16) + 4] = RUNNING;
 SP = [PROCESS_TABLE + ([SYSTEM_STATUS_TABLE + 1] * 16) + 13];
-
 ireturn;

@@ -1,7 +1,8 @@
 load --os ../spl/splprogs/os_startup.xsm
-load --init ../expl/explprogs/student.xsm
+load --init ../expl/explprogs/numbers.xsm
 load --int=10 ../spl/splprogs/int10_haltprog.xsm
 load --exhandler ../spl/splprogs/int10_haltprog.xsm
-load --library ../expl/mylib.lib
+load --library ../expl/library.lib
 load --int=timer ../spl/splprogs/timer_interrupt.xsm
 load --int=7 ../spl/splprogs/int7_write.xsm
+load --idle ../expl/explprogs/idle.xsm
