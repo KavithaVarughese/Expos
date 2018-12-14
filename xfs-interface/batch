@@ -5,4 +5,5 @@ load --exhandler ../spl/splprogs/int10_haltprog.xsm
 load --library ../expl/library.lib
 load --int=timer ../spl/splprogs/timer_interrupt.xsm
 load --int=7 ../spl/splprogs/int7_write.xsm
-load --idle ../expl/explprogs/numbers101200.xsm
+load --idle ../expl/explprogs/idle.xsm
+load --module 7 ../spl/splprogs/mod7_bootloader.xsm
