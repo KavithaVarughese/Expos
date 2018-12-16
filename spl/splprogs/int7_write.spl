@@ -35,7 +35,12 @@ else
  alias word R1;
  word = [[PTBR + ((userSP - 3) / 512) * 2] * 512 + ((userSP - 3) % 512)];
  
- print word;
+ multipush(R0,R1);
+ R1 = 3; //function number
+ R2 = [SYSTEM_STATUS_TABLE + 1]; //PID
+ R3 = [[PTBR + ((userSP - 3) / 512) * 2] * 512 + ((userSP - 3) % 512)]; //the word
+ call MOD_4;
+ multipop(R0,R1);
 
  //successful , so return value is 0
  [[PTBR + ((userSP - 1) / 512) * 2] * 512 + ((userSP -1) % 512)] = 0; 

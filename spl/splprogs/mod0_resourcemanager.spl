@@ -1,0 +1,45 @@
+alias functNo R1;
+alias PID R2;
+
+//Acquire Terminal
+if (functNo == 8) then
+ //check if the terminal is free or not
+ if ([TERMINAL_STATUS_TABLE] == 1) then 
+  [PROCESS_TABLE + 16 * PID + 4] = WAIT_TERMINAL; // change to waiting for the terminal to be free
+  
+  //call scheduler so that some other process can run meanwhile
+  multipush(R1,R2,R3);
+   call MOD_5;
+  multipop(R1,R2,R3);
+ endif;
+
+ // successfully gained control over terminal
+ [TERMINAL_STATUS_TABLE] = 1;
+ [TERMINAL_STATUS_TABLE + 1] = PID; 
+endif; 
+
+//Release Terminal
+if (functNo == 9) then
+ //check whether the process who is releasing is the one who acquired it
+ if([TERMINAL_STATUS_TABLE + 1] != PID) then
+  R0 = -1;  //unsuccessful release
+  return;  // get lost cheater
+ endif;
+
+ //successful release
+ [TERMINAL_STATUS_TABLE] = 0;
+ 
+ //the wait is over... The Terminal is freeeee!
+ alias i R3;
+ i = 1;
+ while (i<16) do
+  if ([PROCESS_TABLE + i * 16 + 4] == WAIT_TERMINAL) then
+   [PROCESS_TABLE + i * 16 + 4] = READY;
+  endif;
+  i = i + 1;
+ endwhile;
+
+ R0 = 0; //success!
+endif;
+
+return;

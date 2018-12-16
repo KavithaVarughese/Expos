@@ -8,3 +8,5 @@ load --int=7 ../spl/splprogs/int7_write.xsm
 load --idle ../expl/explprogs/idle.xsm
 load --module 7 ../spl/splprogs/mod7_bootloader.xsm
 load --module 5 ../spl/splprogs/mod5_scheduler.xsm
+load --module 4 ../spl/splprogs/mod4_devicemanager.xsm
+load --module 0 ../spl/splprogs/mod0_resourcemanager.xsm

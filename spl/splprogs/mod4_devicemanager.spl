@@ -1,0 +1,25 @@
+alias functNo R1;
+alias Pid R2;
+
+//Write Terminal
+if (functNo == 3) then
+ //calling resource manager to acquire terminal
+ multipush(R1,R2,R3);
+  R1 = 8; // funtion number
+  R2 = [SYSTEM_STATUS_TABLE + 1]; //PID
+  call MOD_0;
+ multipop(R1,R2,R3);
+
+ print R3; // word is in the R3 register
+
+ //calling resource manager to Release Terminal
+ multipush(R1,R2,R3);
+  R1 = 9;
+  R2 = [SYSTEM_STATUS_TABLE + 1];
+  call MOD_0;
+  R7 = R0; //return value is stored in R7 just in case
+ multipop(R1,R2,R3);
+endif;
+
+return;
+ 
