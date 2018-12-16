@@ -1,1 +1,16 @@
+// change state of invoking process to TERMINATED
+[PROCESS_TABLE + ([SYSTEM_STATUS_TABLE + 1] * 16) + 4] = TERMINATED;
+
+alias i R0;
+i = 1;
+
+//find if there is any other process except idle to run, else halt
+while(i<16) do
+ if([PROCESS_TABLE + (i * 16) + 4] != TERMINATED) then
+  call MOD_5;
+ endif;
+ i = i + 1;
+endwhile;
+
 halt;
+
