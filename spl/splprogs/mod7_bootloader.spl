@@ -3,6 +3,10 @@
 loadi(4,17); //(memory,disk)
 loadi(5,18);
 
+//load console interrupt
+loadi(8,21);
+loadi(9,22);
+
 //load library
 loadi(63,13);
 loadi(64,14);
@@ -15,6 +19,10 @@ loadi(66,8);
 //load exception handler
 loadi(2,15);
 loadi(3,16);
+
+//load int6_read
+loadi(14,27);
+loadi(15,28);
 
 //load int7_write
 loadi(16,29);
@@ -159,6 +167,7 @@ PTLR = 10;  //size of page table
 
 [87*512] = [86*512 + 1]; //stack hold the ip address of the next instructions of init process
 
+[PROCESS_TABLE + 16*2 + 4] = TERMINATED;
 [PROCESS_TABLE + 16*3 + 4] = TERMINATED;
 [PROCESS_TABLE + 16*4 + 4] = TERMINATED;
 [PROCESS_TABLE + 16*5 + 4] = TERMINATED;

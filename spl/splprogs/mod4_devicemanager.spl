@@ -21,5 +21,29 @@ if (functNo == 3) then
  multipop(R1,R2,R3);
 endif;
 
+//read terminal
+if (functNo == 4) then
+ //calling resource manager to acquire terminal
+ multipush(R1,R2,R3);
+  R1 = 8; // funtion number
+  R2 = [SYSTEM_STATUS_TABLE + 1]; //PID
+  call MOD_0;
+ multipop(R1,R2,R3);
+
+ read;
+
+ [PROCESS_TABLE + Pid * 16 + 4] = WAIT_TERMINAL; // wait for read operation to complete
+ 
+ //schedule another process meanwhile
+ multipush(R1,R2,R3);
+  call MOD_5;
+ multipop(R1,R2,R3);
+
+ alias wordAddr R3;
+ alias phywordAddr R4;
+ phywordAddr = [PTBR + ((wordAddr) / 512) * 2] * 512 + ((wordAddr) % 512) ; //address translation
+
+ [phywordAddr] = [PROCESS_TABLE + Pid * 16 + 8]; //transfer from input buffer of process table
+endif;
 return;
  

@@ -1,0 +1,38 @@
+[PROCESS_TABLE + ([SYSTEM_STATUS_TABLE + 1] * 16) + 9] = 7; //set mod flag
+
+alias userSP R0; 
+userSP = SP;
+
+[PROCESS_TABLE + ([SYSTEM_STATUS_TABLE + 1] * 16) + 13] = SP;
+
+SP = [PROCESS_TABLE + ([SYSTEM_STATUS_TABLE + 1] * 16) + 11] * 512 - 1;
+
+alias fileDescriptor R1 ; // Argument 1
+fileDescriptor = [[PTBR + ((userSP - 4) / 512) * 2] * 512 + ((userSP - 4) % 512)];
+
+if (fileDescriptor != -1) then
+ //unsuccessful
+ [[PTBR + ((userSP - 1) / 512) * 2] * 512 + ((userSP -1) % 512)] = -1;
+
+else
+ //get the word
+ alias wordAddr R1;
+ wordAddr = [[PTBR + ((userSP - 3) / 512) * 2] * 512 + ((userSP - 3) % 512)];
+
+ multipush(R0,R1);
+ R1 = 4; //function number
+ R2 = [SYSTEM_STATUS_TABLE + 1]; //PID
+ R3 = [[PTBR + ((userSP - 3) / 512) * 2] * 512 + ((userSP - 3) % 512)]; //the wordAddr
+ call MOD_4;
+ multipop(R0,R1);
+
+//successful , so return value is 0
+ [[PTBR + ((userSP - 1) / 512) * 2] * 512 + ((userSP -1) % 512)] = 0; 
+endif;
+
+SP = userSP;
+
+[PROCESS_TABLE + ([SYSTEM_STATUS_TABLE + 1] * 16) + 9] = 0;
+
+ireturn;
+

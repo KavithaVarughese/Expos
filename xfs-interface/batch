@@ -1,5 +1,5 @@
 load --os ../spl/splprogs/os_startup.xsm
-load --init ../expl/explprogs/oddnum.xsm
+load --init ../expl/explprogs/gcd.xsm
 load --int=10 ../spl/splprogs/int10_haltprog.xsm
 load --exhandler ../spl/splprogs/int10_haltprog.xsm
 load --library ../expl/library.lib
@@ -10,3 +10,5 @@ load --module 7 ../spl/splprogs/mod7_bootloader.xsm
 load --module 5 ../spl/splprogs/mod5_scheduler.xsm
 load --module 4 ../spl/splprogs/mod4_devicemanager.xsm
 load --module 0 ../spl/splprogs/mod0_resourcemanager.xsm
+load --int=console ../spl/splprogs/console_interrupt.xsm
+load --int=6 ../spl/splprogs/int6_read.xsm
