@@ -1,17 +1,33 @@
 alias functNo R1;
 alias PID R2;
 
+//Acquire Disk
+if (functNo == 3) then
+ while ([DISK_STATUS_TABLE] == 1) do
+  //please wait for the line to be free
+  [PROCESS_TABLE + PID * 16 + 4] = WAIT_DISK;
+
+  //meanwhile call scheduler
+  multipush(R1,R2);
+   call MOD_5;
+  multipop(R1,R2);
+ endwhile;
+
+ [DISK_STATUS_TABLE] = 1;
+ [DISK_STATUS_TABLE + 4] = PID;
+endif;
+
 //Acquire Terminal
 if (functNo == 8) then
  //check if the terminal is free or not
- if ([TERMINAL_STATUS_TABLE] == 1) then 
+ while ([TERMINAL_STATUS_TABLE] == 1) do 
   [PROCESS_TABLE + 16 * PID + 4] = WAIT_TERMINAL; // change to waiting for the terminal to be free
   
   //call scheduler so that some other process can run meanwhile
   multipush(R1,R2,R3);
    call MOD_5;
   multipop(R1,R2,R3);
- endif;
+ endwhile;
 
  // successfully gained control over terminal
  [TERMINAL_STATUS_TABLE] = 1;

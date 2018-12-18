@@ -6,10 +6,13 @@ loadi(3,16);
 loadi(4,17); //(memory,disk)
 loadi(5,18);
 
+//load disk interrupt
+loadi(6,19);
+loadi(7,20);
+
 //load console interrupt
 loadi(8,21);
 loadi(9,22);
-
 
 //load int6_read
 loadi(14,27);
@@ -105,6 +108,17 @@ PTLR = 10;  //size of page table
 
 [76*512] = [65*512 + 1]; //stack hold the ip address of the next instructions of init process
 
+//setting up pre process table for init process
+alias preprocesstable R1;
+preprocesstable = 80 * 512 + 496;
+alias i R0;
+i = 0;
+
+while (i < 16) do
+ [preprocesstable + i] = -1;
+ i = i + 1;
+endwhile;
+
 //odd numbers
 
 PTBR = PAGE_TABLE_BASE+40; //PTBR for init process
@@ -144,45 +158,6 @@ PTLR = 10;  //size of page table
 
 [84*512] = [83*512 + 1]; //stack hold the ip address of the next instructions of init process
 
-//prime numbers
-
-PTBR = PAGE_TABLE_BASE+60; //PTBR for init process
-PTLR = 10;  //size of page table
-
-[PTBR+0] = 63; //library
-[PTBR+1] = "0100"; //auxillary information
-[PTBR+2] = 64;
-[PTBR+3] = "0100";
-[PTBR+4] = -1; //heap pages
-[PTBR+5] = "0000";
-[PTBR+6] = -1;
-[PTBR+7] = "0000";
-[PTBR+8] = 86; //code pages
-[PTBR+9] = "0100";
-[PTBR+10] = -1;
-[PTBR+11] = "0100";
-[PTBR+12] = -1;
-[PTBR+13] = "0100";
-[PTBR+14] = -1;
-[PTBR+15] = "0100";
-[PTBR+16] = 87; //stack pages
-[PTBR+17] = "0110";
-[PTBR+18] = -1;
-[PTBR+19] = "0110";
-
-//setting up process table for init
-[PROCESS_TABLE + 16*3 + 1] = 3; //PID
-[PROCESS_TABLE + 16*3 + 4] = CREATED;
-[PROCESS_TABLE + 16*3 + 11] = 88; //userArea Page
-[PROCESS_TABLE + 16*3 + 12] = 0;
-[PROCESS_TABLE + 16*3 + 13] = 8*512;
-[PROCESS_TABLE + 16*3 + 14] = PTBR;
-[PROCESS_TABLE + 16*3 + 15] = PTLR;
-
-//Note the PTBR and PTLR are already initialised on line 67 and 68
-
-[87*512] = [86*512 + 1]; //stack hold the ip address of the next instructions of init process
-
 [PROCESS_TABLE + 16*2 + 4] = TERMINATED;
 [PROCESS_TABLE + 16*3 + 4] = TERMINATED;
 [PROCESS_TABLE + 16*4 + 4] = TERMINATED;
@@ -201,11 +176,13 @@ PTLR = 10;  //size of page table
 //Terminal Status Table
 [TERMINAL_STATUS_TABLE] = 0;
 
+//Disk Status Table
+[DISK_STATUS_TABLE] = 0;
+
 //initializing mem free list
-alias i R0;
 i = 0;
 
-while (i < 89) do //technically should be till 69, but we are already usign till 72 at the present stage
+while (i < 86) do //technically should be till 69, but we are already usign till 72 at the present stage
  [MEMORY_FREE_LIST + i] = 1;
  i = i + 1;
 endwhile;

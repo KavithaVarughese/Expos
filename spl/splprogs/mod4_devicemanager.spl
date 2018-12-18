@@ -1,6 +1,36 @@
 alias functNo R1;
 alias Pid R2;
 
+//Disk load
+if (functNo == 2) then
+ alias PageNo R3;
+ alias BlockNo R4;
+ 
+ //call acquire disk from resource manager
+ multipush(R1,R2,R3,R4);
+  R1 = 3;
+  R2 = [SYSTEM_STATUS_TABLE + 1];
+  call MOD_0;
+ multipop(R1,R2,R3,R4);
+
+ //reset disk status table
+ [DISK_STATUS_TABLE + 1] = 0; //load : 0 ; store : 1
+ [DISK_STATUS_TABLE + 2] = PageNo;
+ [DISK_STATUS_TABLE + 3] = BlockNo;
+
+ //load
+ load(PageNo,BlockNo);
+
+ // now we wait .. for the interrupt
+ [PROCESS_TABLE + Pid * 16 + 4] = WAIT_DISK;
+
+ //invoke the scheduler
+ multipush(R1,R2,R3,R4); 
+  call MOD_5;
+ multipop(R1,R2,R3,R4);
+
+endif;
+
 //Write Terminal
 if (functNo == 3) then
  //calling resource manager to acquire terminal
