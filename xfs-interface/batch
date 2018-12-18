@@ -12,3 +12,6 @@ load --module 4 ../spl/splprogs/mod4_devicemanager.xsm
 load --module 0 ../spl/splprogs/mod0_resourcemanager.xsm
 load --int=console ../spl/splprogs/console_interrupt.xsm
 load --int=6 ../spl/splprogs/int6_read.xsm
+load --int=9 ../spl/splprogs/int9_execsyscall.xsm
+load --module 1 ../spl/splprogs/mod1_processmanager.xsm
+load --module 2 ../spl/splprogs/mod2_memorymanager.xsm

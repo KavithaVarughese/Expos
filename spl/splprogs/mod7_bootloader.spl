@@ -1,3 +1,6 @@
+//load exception handler
+loadi(2,15);
+loadi(3,16);
 
 //load timer interrupt
 loadi(4,17); //(memory,disk)
@@ -7,18 +10,6 @@ loadi(5,18);
 loadi(8,21);
 loadi(9,22);
 
-//load library
-loadi(63,13);
-loadi(64,14);
-
-//load init program
-
-loadi(65,7);
-loadi(66,8);
-
-//load exception handler
-loadi(2,15);
-loadi(3,16);
 
 //load int6_read
 loadi(14,27);
@@ -28,6 +19,10 @@ loadi(15,28);
 loadi(16,29);
 loadi(17,30);
 
+//load int9_exec
+loadi(20,33);
+loadi(21,34);
+
 //load int10_halt program
 loadi(22,35);
 loadi(23,36);
@@ -36,6 +31,14 @@ loadi(23,36);
 loadi(40,53);
 loadi(41,54);
 
+//load module 1 .. process manager
+loadi(42,55);
+loadi(43,56);
+
+//load module 2 .. memory manager
+loadi(44,57);
+loadi(45,58);
+
 //load module 4 .. device manager module
 loadi(48,61);
 loadi(49,62);
@@ -43,6 +46,19 @@ loadi(49,62);
 //load module 5 .. scheduler
 loadi(50,63);
 loadi(51,64);
+
+//inode table copy
+loadi(59,3);
+loadi(60,4);
+
+//load library
+loadi(63,13);
+loadi(64,14);
+
+//load init program
+
+loadi(65,7);
+loadi(66,8);
 
 
 //even number
@@ -184,5 +200,18 @@ PTLR = 10;  //size of page table
 
 //Terminal Status Table
 [TERMINAL_STATUS_TABLE] = 0;
+
+//initializing mem free list
+alias i R0;
+i = 0;
+
+while (i < 89) do //technically should be till 69, but we are already usign till 72 at the present stage
+ [MEMORY_FREE_LIST + i] = 1;
+ i = i + 1;
+endwhile;
+while (i<128) do 
+ [MEMORY_FREE_LIST + i] = 0;
+ i = i + 1;
+endwhile;
 
 return;

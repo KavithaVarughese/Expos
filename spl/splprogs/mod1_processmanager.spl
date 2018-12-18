@@ -1,0 +1,67 @@
+alias functNo R1;
+alias pid R2;
+
+//Free User Area Page
+if (functNo == 2) then
+
+ // call release page from memory manager
+ multipush(R1,R2);
+  R1 = 2;
+  R2 = [PROCESS_TABLE + ([SYSTEM_STATUS_TABLE + 1] * 16) + 11]; //user Area Page
+  call MOD_2;
+ multipop(R1,R2);
+
+endif;
+
+//exit process
+if (functNo == 3) then
+ 
+ //call Free Page Table from process manager 
+ multipush(R1,R2);
+  R1 = 4;
+  R2 = [SYSTEM_STATUS_TABLE + 1]; //user Area Page
+  call MOD_1;
+ multipop(R1,R2);
+
+ //call Free User Page Area from process manager 
+ multipush(R1,R2);
+  R1 = 2;
+  R2 = [SYSTEM_STATUS_TABLE + 1]; //user Area Page
+  call MOD_1;
+ multipop(R1,R2);
+
+ [PROCESS_TABLE + (pid * 16) + 4] = TERMINATED; //process is dead
+ 
+endif;
+
+//Free Page Table
+if (functNo == 4) then
+ //invalidate library
+ [PTBR + 0] = -1;
+ [PTBR + 1] = "0000";
+ [PTBR + 2] = -1;
+ [PTBR + 3] = "0000";
+
+ //invalidating the rest
+ alias counter R3;
+ counter = 2;
+
+ while (counter < 10) do
+  if([PTBR + counter * 2] != -1) then
+   
+   //call release page from memory manager
+   multipush(R1,R2,R3);
+    R1 = 2;
+    R2 = [PTBR + counter * 2];
+    call MOD_2;
+   multipop(R1,R2,R3);
+    
+   [PTBR + counter * 2] = -1;
+   [PTBR + 1 + counter * 2] = "0000";
+
+  endif;
+  counter = counter + 1;
+ endwhile;
+endif;
+ 
+return;

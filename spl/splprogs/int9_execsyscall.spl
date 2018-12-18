@@ -1,0 +1,164 @@
+alias userSP R0; //saving userStack
+userSP = SP;
+
+[PROCESS_TABLE + ([SYSTEM_STATUS_TABLE + 1] * 16) + 13] = SP; //setting up kernel stack
+
+SP = [PROCESS_TABLE + ([SYSTEM_STATUS_TABLE + 1] * 16) + 11] * 512 - 1; //setting up kernel stack
+
+[PROCESS_TABLE + ([SYSTEM_STATUS_TABLE + 1] * 16) + 9] = 9; //changing mode flag
+
+//Argument 1
+alias filename R1;
+filename = [[PTBR + ((userSP - 4) / 512) * 2] * 512 + ((userSP - 4) % 512)];
+
+//check if file name is there in inode table
+alias inodeIndex R2;
+inodeIndex = 0; 
+alias flag R3;
+flag = 0;
+
+while (inodeIndex < MAX_FILE_NUM) do
+ if ([INODE_TABLE + inodeIndex * 16 + 1] == filename) then //filename is second word of inode table and size of each inode table entry is 16
+  flag = 1;
+  break;
+ endif;
+ inodeIndex = inodeIndex + 1;
+endwhile;
+
+// inodeIndex : the inode table entry number
+
+if (flag == 0 || [INODE_TABLE + inodeIndex * 16] != 3) then //XEXE format = 3
+ [[PTBR + ((userSP - 1) / 512) * 2] * 512 + ((userSP - 1) % 512)] = -1;
+ print "doesnt exist";
+ //revert everything
+ [PROCESS_TABLE + ([SYSTEM_STATUS_TABLE + 1] * 16) + 9] = 0;
+ SP =userSP;
+ ireturn;
+endif;
+
+//file present
+//call exit from process manager
+multipush(R0,R1,R2,R3);
+ R1 = 3;
+ R2 = [SYSTEM_STATUS_TABLE + 1];
+ call MOD_1;
+multipop(R0,R1,R2,R3);
+
+//get user area page number for retrieval
+alias UAPno R3;
+UAPno = [PROCESS_TABLE + ([SYSTEM_STATUS_TABLE + 1] * 16) + 11] ;
+
+//update mem free list
+[MEMORY_FREE_LIST + UAPno] = [MEMORY_FREE_LIST + UAPno] + 1;
+
+//decrement mem free count in system status table
+[SYSTEM_STATUS_TABLE + 2] = [SYSTEM_STATUS_TABLE + 2] - 1;
+
+//setting kernel stack of new process
+SP = UAPno * 512 - 1 ; //this UAP holds the return address. So we should be careful not to lose it
+
+//setting up new process table .. PID same as old one
+[PROCESS_TABLE + ([SYSTEM_STATUS_TABLE + 1] * 16) + 1] = [SYSTEM_STATUS_TABLE + 1]; 
+[PROCESS_TABLE + ([SYSTEM_STATUS_TABLE + 1] * 16) + 4] = RUNNING; //state
+[PROCESS_TABLE + ([SYSTEM_STATUS_TABLE + 1] * 16) + 7] = inodeIndex; // saving inode index
+[PROCESS_TABLE + ([SYSTEM_STATUS_TABLE + 1] * 16) + 12] = 0;
+[PROCESS_TABLE + ([SYSTEM_STATUS_TABLE + 1] * 16) + 13] = 8*512;
+[PROCESS_TABLE + ([SYSTEM_STATUS_TABLE + 1] * 16) + 14] = PTBR;
+[PROCESS_TABLE + ([SYSTEM_STATUS_TABLE + 1] * 16) + 15] = 10;
+
+
+//setting up new page table
+[PTBR + 0] = 63; //library
+[PTBR + 1] = "0100";
+[PTBR + 2] = 64;
+[PTBR + 3] = "0100";
+
+alias newPage R4;
+
+//call get free page from memory manager module
+multipush(R0,R1,R2,R3,R4);
+ R1 = 1;
+ call MOD_2;
+ R7 = R0;
+multipop(R0,R1,R2,R3,R4);
+
+newPage = R7;
+[PTBR + 4] = newPage; //heap
+[PTBR + 5] = "0110";
+
+multipush(R0,R1,R2,R3,R4);
+ R1 = 1;
+ call MOD_2;
+ R7 = R0;
+multipop(R0,R1,R2,R3,R4);
+
+newPage = R7;
+[PTBR + 6] = newPage; //heap
+[PTBR + 7] = "0110";
+
+//checking how many pages are occupied for code in inode table
+alias count R5; 
+count = 0;
+
+while (count < 4) do
+ if ([INODE_TABLE + inodeIndex * 16 + 8 + count] == -1) then
+  break;  
+ endif;
+ count = count + 1;
+endwhile;
+
+alias counter R6;
+counter = 0;
+
+while (counter < 4) do 
+ if (count > 0) then
+  multipush(R0,R1,R2,R3,R4,R5,R6);
+   R1 = 1;
+   call MOD_2;
+   R7 = R0;
+  multipop(R0,R1,R2,R3,R4,R5,R6);
+
+  newPage = R7;
+
+  //copy code from inode to this new page
+  loadi(newPage,[INODE_TABLE + 16 * inodeIndex + 8 + counter]);
+  
+  [PTBR + 8 + counter * 2] = newPage; //code
+  [PTBR + 9 + counter * 2] = "0100"; 
+  count = count - 1;
+ else
+  [PTBR + 8 + counter * 2] = -1; //code
+  [PTBR + 9 + counter * 2] = "0100";
+ endif;
+ counter = counter + 1;
+endwhile;
+
+multipush(R0,R1,R2,R3,R4);
+ R1 = 1;
+ call MOD_2;
+ R7 = R0;
+multipop(R0,R1,R2,R3,R4);
+
+newPage = R7;
+[PTBR + 16] = newPage; //stack
+[PTBR + 17] = "0110";
+
+multipush(R0,R1,R2,R3,R4);
+ R1 = 1;
+ call MOD_2;
+ R7 = R0;
+multipop(R0,R1,R2,R3,R4);
+
+newPage = R7;
+[PTBR + 18] = newPage; //stack
+[PTBR + 19] = "0110";
+
+//page table set
+
+//store IP (codepage) to the top of stack
+[[PTBR + 16] * 512] = [[PTBR + 8] * 512 + 1]; //[StackTop * 512] = [CodePageStart * 512 + 1]
+
+SP = [PROCESS_TABLE + ([SYSTEM_STATUS_TABLE + 1] * 16) + 13];
+[PROCESS_TABLE + ([SYSTEM_STATUS_TABLE + 1] * 16) + 9] = 0;
+ireturn;
+

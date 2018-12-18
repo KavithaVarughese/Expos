@@ -51,6 +51,8 @@ SP = 8 * 512;
 
 //setting system status table of init
 [SYSTEM_STATUS_TABLE + 1] = 0;
+[SYSTEM_STATUS_TABLE + 2] = 39; // mem free count
+[SYSTEM_STATUS_TABLE + 3] = 0; // mem wait count
 
 
 ireturn; //go to the instruction in unprivileged mode
