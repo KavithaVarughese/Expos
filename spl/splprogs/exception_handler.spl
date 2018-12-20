@@ -1,0 +1,88 @@
+[PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16 + 9] = -1 ; //exception handler mode flag
+
+[PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16 + 13] = SP;
+
+SP = [PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16 + 11] * 512 - 1;
+
+backup;
+
+multipush(EIP); //instruction pointer to the instruction that caused the exception
+
+// check if EC != 0 or stack is full and exit with appropriate messages
+if (EC != 0 || [PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16 + 13] == (PTLR * 512 - 1)) then
+ print [SYSTEM_STATUS_TABLE + 1];
+ print (EIP);
+ print (EC);
+ print (EPN);
+ print (EMA);
+ print "ill mem";
+
+ // nice aayitt exit process and call scheduler
+ R1 = 3;
+ R2 = [SYSTEM_STATUS_TABLE + 1];
+ call MOD_1;
+ 
+ call MOD_5; //exited and called scheduler
+
+else
+
+ alias counter R1;
+
+ //eXpOS is designed in a way that page fault can only occur for code and heap pages
+ //check if page fault in code page
+ counter = 4;
+ while (counter < 8) do
+  if (EPN == counter) then
+   R11 = counter;
+
+   //call get code page from memory manager
+   multipush(R1);
+    R1 = 5;
+    R2 = [DISK_MAP_TABLE + 10 * [SYSTEM_STATUS_TABLE + 1] + R11];
+    call MOD_2;
+    R7 = R0;
+    
+   multipop(R1);
+   
+   //set this new page into the page table 
+   [PTBR + [SYSTEM_STATUS_TABLE + 1] * 20 + (counter * 2)] = R7;
+   [PTBR + [SYSTEM_STATUS_TABLE + 1] * 20 + (counter * 2) + 1] = "1100";
+  endif;
+  counter = counter + 1;
+
+ endwhile;
+
+ // otherwise check whether its heap
+ counter = 2;
+ while (counter < 4) do
+  if (EPN == counter) then
+   R2 = counter;
+  
+   //call get free page from memory manager
+   multipush(R1);
+    R1 = 1;
+    call MOD_2;
+    R7 = R0;
+   multipop(R1);
+ 
+   //set this new page into the page table 
+   [PTBR + [SYSTEM_STATUS_TABLE + 1] * 20 + (counter * 2)] = R7;
+   [PTBR + [SYSTEM_STATUS_TABLE + 1] * 20 + (counter * 2) + 1] = "1110";
+  endif;
+  counter = counter + 1;
+ endwhile;
+
+endif;
+
+[PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16 + 9] = 0 ;
+multipop(EIP);
+
+restore;
+
+SP = [PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16 + 13];
+
+SP = SP + 1;
+
+[[PTBR + (SP / 512) * 2] * 512 + (SP % 512)] = EIP ; //location pointed to by SP
+
+ireturn;
