@@ -54,6 +54,22 @@ if (functNo == 3) then
  multipop(R1,R2);
 
  [PROCESS_TABLE + (pid * 16) + 4] = TERMINATED; //process is dead
+
+ //if the program is terminating and is not called from the exec system call, then all processes waiting for this must change to ready
+ if ([PROCESS_TABLE + pid * 16 + 9] != 9) then
+  alias i R3;
+  i = 1;
+  while (i < 16) do
+   if (([PROCESS_TABLE + 16 * i + 4] == WAIT_PROCESS) && ([PROCESS_TABLE + 16 * i + 5] == pid)) then
+    [PROCESS_TABLE + 16 * i + 4] = READY;
+    [PROCESS_TABLE + 16 * i + 5] = -1;
+   endif;
+   if ([PROCESS_TABLE + 16 * i + 2] == pid) then
+    [PROCESS_TABLE + 16 * i + 2] = -1;  // making all children to orphans
+   endif;
+   i = i + 1;
+  endwhile;
+ endif;
  
 endif;
 

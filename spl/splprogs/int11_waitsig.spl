@@ -1,0 +1,70 @@
+[PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16 + 13] = SP;
+
+alias userSP R0;
+userSP = SP;
+
+SP = [PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16 + 11] * 512 - 1;
+
+alias syscallno R1;
+syscallno = [[PTBR + ((userSP - 5) / 512) * 2] * 512 + ((userSP - 5) % 512)];
+
+//change the mode flags to this system call number
+[PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16 + 9] = syscallno;
+
+//implementation
+//getpid
+if (syscallno == 11) then
+ [[PTBR + ((userSP - 1) / 512) * 2] * 512 + ((userSP - 1) % 512)] = [SYSTEM_STATUS_TABLE + 1];
+endif;
+
+//getppid
+if (syscallno == 12) then
+ [[PTBR + ((userSP - 1) / 512) * 2] * 512 + ((userSP - 1) % 512)] = [PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16 + 2];
+endif;
+
+//wait
+if (syscallno == 13) then
+ alias pid R2;
+ pid = [[PTBR + ((userSP - 4) / 512) * 2] * 512 + ((userSP - 4) % 512)]; //argument 1;
+
+ //check for the conditions for a process to be allowed to wait
+ if ((pid == [SYSTEM_STATUS_TABLE + 1]) || ([PROCESS_TABLE + pid * 16 + 4] == TERMINATED) || (pid < 0) || (pid > 15)) then
+  [[PTBR + ((userSP - 1) / 512) * 2] * 512 + ((userSP - 1) % 512)] = -1;
+  
+ else
+ 
+  //set the process state
+  [PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16 + 4] = WAIT_PROCESS;
+  [PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16 + 5] = pid;
+
+  //meanwhile call scheduler
+  multipush(R0,R1,R2);
+   call MOD_5;
+  multipop(R0,R1,R2);
+
+  [[PTBR + ((userSP - 1) / 512) * 2] * 512 + ((userSP - 1) % 512)] = 0; //indicating successful wait and restart
+ endif;
+endif;
+
+//signal
+if (syscallno == 14) then
+
+ //revert all wait_process to ready
+ alias i R2;
+ i = 1;
+ while (i < 16) do
+  if (([PROCESS_TABLE + i * 16 + 4] == WAIT_PROCESS) && ([PROCESS_TABLE + i * 16 + 5] == [SYSTEM_STATUS_TABLE + 1])) then
+   [PROCESS_TABLE + i * 16 + 4] = READY;
+   [PROCESS_TABLE + i * 16 + 5] = -1;
+  endif;
+  i = i + 1;
+ endwhile;
+
+ [[PTBR + ((userSP - 1) / 512) * 2] * 512 + ((userSP - 1) % 512)] = 0; //indicating successful
+endif;
+
+[PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16 + 9] = 0;
+
+SP = userSP;
+
+ireturn;
