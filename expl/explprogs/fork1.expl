@@ -1,0 +1,25 @@
+int main()
+{
+ 
+ decl
+  str string;
+  int temp,pid;
+ enddecl
+
+ begin
+  pid = exposcall("Fork");
+  if (pid < 0) then
+   temp = exposcall("Write", -2, "fork failure");
+  endif;
+  if (pid == 0) then
+   string = "evennum.xsm";
+   temp = exposcall("Exec",string);
+  else 
+   string = "oddnum.xsm";
+   temp = exposcall("Exec",string);
+  endif;
+  return 0;
+ end
+}
+
+
