@@ -1,0 +1,161 @@
+[PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16 + 9] = 8;
+
+[PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16 + 13] = SP;
+alias userSP R0;
+userSP = SP;
+
+SP = [PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16 + 11] * 512 - 1;
+
+// call get pcb from process manager to get new pid for child process
+alias ChildPid R7;
+
+multipush(R0);
+ R1 = 1;
+ call MOD_1;
+ ChildPid = R0;
+multipop(R0);
+
+//if process table is full, pcb returns -1. Check for it and leave if true
+if (ChildPid == -1) then
+ [[PTBR + ((userSP-1) / 512) *2] * 512 + ((userSP - 1) % 512)] = -1; //return -1
+ [PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16 + 9] = 0; //revert mode flag
+ SP = userSP ; //finally stack
+ ireturn;
+endif;
+
+//page table and process table is not shared by both parent and child
+
+alias ChildProcessTable R2;
+ChildProcessTable = PROCESS_TABLE + 16 * ChildPid;
+
+alias Childptbr R1;
+Childptbr = [ChildProcessTable + 14]; // already initialised in get pcb
+
+alias ParentProcessTable R3;
+ParentProcessTable = PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16;
+
+PTBR = [ParentProcessTable + 14]; //just to be sure... PTBR is parent ptbr
+
+
+//check if heap of parent is empty
+//if ([PTBR + 4] == -1) then
+ //call get free page from memory manager
+// multipush(R0,R1,R2,R3,R7);
+//  R1 = 1;
+//  call MOD_2;
+//  [PTBR + 4] = R0;
+//  [PTBR + 5] = "1110";
+// multipop(R0,R1,R2,R3,R7);
+//endif;
+
+//if ([PTBR + 6] == -1) then
+ //call get free page from memory manager
+// multipush(R0,R1,R2,R3,R7);
+//  R1 = 1;
+//  call MOD_2;
+//  [PTBR + 6] = R0;
+//  [PTBR + 7] = "1110";
+// multipop(R0,R1,R2,R3,R7);
+//endif;
+
+//heap pages set for sure
+
+//child requires new stack page and a new user area page
+//call get free page for all three
+//stack
+multipush(R0,R1,R2,R3,R7);
+ R1 = 1;
+ call MOD_2;
+ R8 = R0;
+multipop(R0,R1,R2,R3,R7);
+
+[Childptbr + 16] = R8;
+[Childptbr + 17] = [PTBR + 17];
+
+multipush(R0,R1,R2,R3,R7);
+ R1 = 1;
+ call MOD_2;
+ R8 = R0;
+multipop(R0,R1,R2,R3,R7);
+
+[Childptbr + 18] = R8;
+[Childptbr + 19] = [PTBR + 19];
+
+//user area page
+multipush(R0,R1,R2,R3,R7);
+ R1 = 1;
+ call MOD_2;
+ R8 = R0;
+multipop(R0,R1,R2,R3,R7);
+
+//setting up process table of child
+[ChildProcessTable] = 0; //tick
+//pid already initialised in get pcb
+[ChildProcessTable + 2] = [SYSTEM_STATUS_TABLE + 1]; //parent pid
+[ChildProcessTable + 3] = [ParentProcessTable + 3]; //userId 
+[ChildProcessTable + 4] = CREATED;
+[ChildProcessTable + 6] = [ParentProcessTable + 6]; //swap status
+[ChildProcessTable + 7] = [ParentProcessTable + 7]; //inode index as they run the same program
+//not necessary to initilize input buffer now
+[ChildProcessTable + 9] = 0; //mode flag
+[ChildProcessTable + 10] = [ParentProcessTable + 10]; // user area swap status
+[ChildProcessTable + 11] = R8; // from above
+[ChildProcessTable + 12] = 0; //kptr as child process starts execution in user mode
+[ChildProcessTable + 13] = [ParentProcessTable + 13]; //uptr as user stack is same for both
+//ptbr and ptlr already initialised in get pcb
+
+//per process resource table is same as that of parent as they are shared
+alias i R4;
+i = 0;
+while (i < 16) do
+ [[ChildProcessTable + 11] * 512 + 496 + i] = [[ParentProcessTable + 11] * 512 + 496 + i];  
+ i = i + 1; 
+endwhile;
+
+//set up disk map table
+i = 0;
+while (i < 10) do
+ [DISK_MAP_TABLE + ChildPid * 10 + i] = [DISK_MAP_TABLE + [SYSTEM_STATUS_TABLE + 1] * 10 + i];
+ i = i + 1;
+endwhile;
+
+//set of page table 
+i = 0;
+while (i<16) do
+ [Childptbr + i] = [PTBR + i];
+ if (i % 2 == 0) then // to increment valid entries of pages in memory free list
+  [MEMORY_FREE_LIST + [Childptbr + i]] = [MEMORY_FREE_LIST + [Childptbr + i]] + 1;  
+ endif;
+ i = i + 1;
+endwhile;
+//stack pages are already initialized above
+
+//copy user stack of parent to child word by word
+i = 0;
+while (i < 512) do
+ [[Childptbr + 16] * 512 + i] = [[PTBR + 16] * 512 + i];
+ [[Childptbr + 18] * 512 + i] = [[PTBR + 18] * 512 + i];
+ i = i + 1; 
+endwhile;
+
+//store BP to top of kernel stack of child
+//so change SP to child's kernel stack first
+SP = [ChildProcessTable + 11] * 512 - 1;
+multipush(BP);
+
+//set return value in parent table
+[[PTBR + ((userSP - 1) / 512) * 2] * 512 + ((userSP - 1) % 512)] = ChildPid;
+//set return value of childprocess
+userSP = [ChildProcessTable + 13];
+[[Childptbr + ((userSP - 1) / 512) * 2] * 512 + ((userSP - 1) % 512)] = 0;
+
+//child process runs next so
+//PTBR = Childptbr;
+
+[PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16 + 9] = 0; //reset mode flag
+
+//switch to user stack of the parent again
+SP = [PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16 + 13];
+
+ireturn;
+

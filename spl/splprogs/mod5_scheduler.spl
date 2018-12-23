@@ -44,19 +44,19 @@ PTBR = [newProcessTable + 14];
 PTLR = [newProcessTable + 15];
 
 [SYSTEM_STATUS_TABLE + 1] = newPid;
-
-//no user content to restore if the process is just CREATED, as it has never been used. so jump 
-if ([newProcessTable + 4] == CREATED) then
+breakpoint;
+//no user content to restore if the process is just CREATED, as it has never been used. so jump, only happens during fork
+if ([newProcessTable + 4] == CREATED) then 
  SP = [newProcessTable + 13];
+ //base pointer stored at the top of stack
+ BP = [[newProcessTable + 11] * 512 + [newProcessTable + 12]]; 
  [newProcessTable + 4] = RUNNING;
  [newProcessTable + 9] = 0;
  ireturn;
 endif;
 
 [newProcessTable + 4] = RUNNING;
-
 multipop(BP);
-
 return;
 
 

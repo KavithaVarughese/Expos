@@ -16,3 +16,4 @@ load --module 1 ../spl/splprogs/mod1_processmanager.xsm
 load --module 2 ../spl/splprogs/mod2_memorymanager.xsm
 load --int=disk ../spl/splprogs/disk_interrupt.xsm
 load --module 7 ../spl/splprogs/mod7_bootloader.xsm
+load --int=8 ../spl/splprogs/int8_fork.xsm
