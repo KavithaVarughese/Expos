@@ -1,0 +1,88 @@
+alias userSP R1;
+userSP = SP;
+
+[PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16 + 13] = SP;
+
+SP = [PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16 + 11] * 512 - 1;
+
+alias syscallno R2;
+syscallno = [[PTBR + ((userSP - 5) / 512) * 2] * 512 + ((userSP - 5) % 512)];
+
+[PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16 + 9] = syscallno;
+
+//sem lock system call
+if (syscallno == 19) then
+ alias semId R3;
+ semId = [[PTBR + ((userSP - 4) / 512) * 2] * 512 + ((userSP - 4) % 512)];
+
+ // check if semId is valid or not
+ if ((semId < 0) || (semId > 7) || ([[PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16 + 11] * 512 + 496 + semId] != 1)) then
+  [[PTBR + ((userSP - 1) / 512) * 2] * 512 + ((userSP - 1) % 512)] = -1; //failure
+  [PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16 + 9] = 0;
+  SP = userSP;
+  ireturn; 
+ endif;
+
+ //set to wait if already locked
+ while ([SEMAPHORE_TABLE + 4 * semId] != -1) do
+  [PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16 + 4] = WAIT_SEMAPHORE;
+  [PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16 + 5] = semId;
+
+  //meanwhile schedule another process
+  multipush(R1,R2,R3);
+   call MOD_5;
+  multipop(R1,R2,R3);
+ endwhile; 
+
+ //update semaphore table 
+ [SEMAPHORE_TABLE + semId * 4] = [SYSTEM_STATUS_TABLE + 1];
+ 
+ //return value
+ [[PTBR + ((userSP - 1) / 512) * 2] * 512 + ((userSP - 1) % 512)] = 0; //success
+endif; 
+
+//sem unlock system call
+if (syscallno == 20) then
+ alias semId R3;
+ semId = [[PTBR + ((userSP - 4) / 512) * 2] * 512 + ((userSP - 4) % 512)];
+
+ // check if semId is valid or not
+ if ((semId < 0) || (semId > 7) || ([[PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16 + 11] * 512 + 496 + semId] != 1)) then
+  [[PTBR + ((userSP - 1) / 512) * 2] * 512 + ((userSP - 1) % 512)] = -1; //failure for invalid semId
+  [PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16 + 9] = 0;
+  SP = userSP;
+  ireturn; 
+ endif;
+
+ //check if the running process is the one who locked the semaphore
+ if ([SEMAPHORE_TABLE + 4 * semId] != [SYSTEM_STATUS_TABLE + 1]) then
+  [[PTBR + ((userSP - 1) / 512) * 2] * 512 + ((userSP - 1) % 512)] = -2; //failure if wrong process invoked this interrupt
+  [PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16 + 9] = 0;
+  SP = userSP;
+  ireturn;
+ endif;
+
+ //update semaphore table
+ [SEMAPHORE_TABLE + 4 * semId] = -1;
+
+ //free all processes waiting for this semaphore to be unlocked
+ alias i R4;
+ i = 1;
+ while (i < 16) do
+  if (([PROCESS_TABLE + i * 16 + 4] == WAIT_SEMAPHORE) && ([PROCESS_TABLE + i * 16 + 5] == semId)) then    
+   [PROCESS_TABLE + i * 16 + 4] = READY;
+   [PROCESS_TABLE + i * 16 + 5] = -1;
+  endif; 
+  i = i + 1;
+ endwhile;
+
+ //return value
+ [[PTBR + ((userSP - 1) / 512) * 2] * 512 + ((userSP - 1) % 512)] = 0; //success
+
+endif;
+
+[PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16 + 9] = 0;
+
+SP = userSP;
+
+return;

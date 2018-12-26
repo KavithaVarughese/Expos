@@ -38,6 +38,14 @@ loadi(23,36);
 loadi(24,37);
 loadi(25,38);
 
+//load int13_semaphore acquire system
+loadi(28,41);
+loadi(29,42);
+
+//load int14_semaphore lock system
+loadi(30,43);
+loadi(31,44);
+
 //load int15_shutdown
 loadi(32,45);
 loadi(33,46);
@@ -146,6 +154,14 @@ endwhile;
 [DISK_MAP_TABLE + 10 + 7] = -1;
 [DISK_MAP_TABLE + 10 + 8] = -1;
 [DISK_MAP_TABLE + 10 + 9] = -1;
+
+//setting up semaphore table 
+i = 0; 
+while (i < 32) do 
+ [SEMAPHORE_TABLE + i * 4] = -1; //locking pid
+ [SEMAPHORE_TABLE + i * 4 + 1] = 0; //process count
+ i = i + 1;
+endwhile;
 
 //odd numbers
 

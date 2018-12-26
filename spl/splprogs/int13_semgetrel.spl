@@ -1,0 +1,88 @@
+alias userSP R1;
+userSP = SP;
+
+[PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16 + 13] = SP;
+SP = [PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16 + 11] * 512 - 1;
+
+alias systemcallno R2;
+systemcallno = [[PTBR + ((userSP - 5) / 512) * 2] * 512 + ((userSP - 5) % 512)];
+
+[PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16 + 9] = systemcallno;
+
+//semget
+if(systemcallno == 17) then
+ //find free entry in per process resource table
+ alias i R3;
+ i = 0;
+ while (i < 16) do 
+  if ([[PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16 + 11] * 512 + 496 + i] == -1) then
+   break;
+  endif;
+  i = i + 2;
+ endwhile;
+
+ // if no entry in per process table is free , return -1
+ if (i == 16) then
+  [[PTBR + ((userSP - 1) / 512) * 2] * 512 + ((userSP - 1) % 512)] = -1; // if the reason for error is no free entry in per process table
+  [PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16 + 9] = 0;
+  SP = userSP;
+  ireturn;
+ endif;
+
+ //call acquire semaphore
+ multipush(R3,R1,R2);
+  R1 = 6;
+  R2 = [SYSTEM_STATUS_TABLE + 1];
+  call MOD_0;
+  R7 = R0;
+ multipop(R3,R1,R2); 
+
+ //if acquire semaphore was a failure
+ if (R7 == -1) then
+  [[PTBR + ((userSP - 1) / 512) * 2] * 512 + ((userSP - 1) % 512)] = -2; //if the reason for error is no free semaphore
+  [PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16 + 9] = 0;
+  SP = userSP;
+  ireturn;
+ endif;
+
+ // assign values to per process table
+ [[PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16 + 11] * 512 + 496 + i] = 1; // 1 for semaphore
+ [[PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16 + 11] * 512 + 496 + i + 1] = R7; // index in the semaphore table 
+ 
+ R0 = i; // return the per process table index as the semaphore descriptor
+endif;
+ 
+//semrelease
+if(systemcallno == 18) then
+ alias semdesc R3;
+ semdesc = [[PTBR + ((userSP - 4) / 512) * 2] * 512 + ((userSP - 4) % 512)]; 
+
+ // check if semdesc is valid or not
+ if ((semdesc < 0) || (semdesc > 7) || ([[PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16 + 11] * 512 + 496 + semdesc] != 1)) then
+  [[PTBR + ((userSP - 1) / 512) * 2] * 512 + ((userSP - 1) % 512)] = -1; // invalid descriptor
+  [PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16 + 9] = 0;
+  SP = userSP;
+  ireturn;
+ endif;
+ 
+ //call release semaphore from resource table
+ R8 = semdesc;
+ multipush(R1,R2,R3);
+  R1 = 7;
+  R2 = [[PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16 + 11] * 512 + 496 + R8 + 1];
+  R3 = [SYSTEM_STATUS_TABLE + 1];
+  call MOD_0;
+  R7 = R0;
+ multipop(R1,R2,R3);
+
+ //invalidate per process table entry
+ [[PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16 + 11] * 512 + 496 + semdesc] = -1;
+ 
+ R0 = 0;
+endif;
+
+[PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16 + 9] = 0;
+
+SP = userSP;
+
+ireturn;
