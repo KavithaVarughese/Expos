@@ -8,7 +8,7 @@ begin
  pid = exposcall("Fork");
  pid = exposcall("Fork");
  pid = exposcall("Fork");
- temp = exposcall("Exec","pid.xsm");
+ temp = exposcall("Exec","child.xsm");
  return 0;
 end
 }
