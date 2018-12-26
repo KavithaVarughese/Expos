@@ -1,5 +1,5 @@
 load --os ../spl/splprogs/os_startup.xsm
-load --init ../expl/explprogs/shell2.xsm
+load --init ../expl/explprogs/rw.xsm
 load --int=10 ../spl/splprogs/int10_haltprog.xsm
 load --exhandler ../spl/splprogs/exception_handler.xsm
 load --library ../expl/library.lib
