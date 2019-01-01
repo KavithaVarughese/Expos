@@ -1,0 +1,175 @@
+alias userSP R0;
+userSP = SP;
+
+alias PTentry R13;
+PTentry = PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16;
+
+alias returnval R14;
+returnval = [[PTBR + ((userSP - 1) / 512) * 2] * 512 + ((userSP - 1) % 512)];
+
+[PTentry + 13] = SP;
+
+SP = [PTentry + 11] * 512 - 1;
+
+alias syscallno R1;
+syscallno = [[PTBR + ((userSP -5) / 512) * 2] * 512 + ((userSP - 5) % 512)];
+
+[PTentry + 9] = syscallno;
+
+alias filename R2;
+filename = [[PTBR + ((userSP - 4) / 512) * 2] * 512 + ((userSP - 4) % 512)];
+
+//create
+if (syscallno == 1) then
+ alias permission R3;
+
+ permission = [[PTBR + ((userSP -3) / 512) * 2] * 512 + ((userSP - 3) % 512)];
+
+ //check if file is already present or not
+ alias index R5;
+ index = -1;
+ alias i R4;
+ i = 0;
+ while (i < 60) do
+  if ([INODE_TABLE + i * 16 + 1] == filename) then
+   returnval= 0; // file apready present
+   goto label1;
+  endif;
+  if (index == -1) then
+   if ([INODE_TABLE + i * 16 + 1] == -1) then
+      index = i;
+    endif;
+  endif;
+  i = i + 1;
+ endwhile;
+
+  // if no free entry is found
+  if (i == 60) then
+   returnval = -1; //no free space
+   goto label1;
+  endif;
+ 
+  i = index;
+  //otherwise set up inode table
+  [INODE_TABLE + i * 16] = 2; //file type = DATA 
+  [INODE_TABLE + i * 16 + 1] = filename; //file name
+  [INODE_TABLE + i * 16 + 2] = 0; // file size
+  [INODE_TABLE + i * 16 + 3] = [PTentry + 3]; //userId
+  [INODE_TABLE + i * 16 + 4] = permission; //permission  
+  [INODE_TABLE + i * 16 + 8] = -1; //data blocks
+  [INODE_TABLE + i * 16 + 9] = -1; 
+  [INODE_TABLE + i * 16 + 10] = -1; 
+  [INODE_TABLE + i * 16 + 11] = -1; 
+
+  //set up root file entry of the file
+  [ROOT_FILE + i * 8] = filename ;//file name
+  [ROOT_FILE + i * 8 + 1] = 0 ; //file size
+  [ROOT_FILE + i * 8 + 2] = 2 ; //file type
+  [ROOT_FILE + i * 8 + 3] = filename ;
+  [ROOT_FILE + i * 8 + 4] = [USER_TABLE + [INODE_TABLE + i * 16 + 3] * 2] ; //username corresponding to user id entry 
+  [ROOT_FILE + i * 8 + 5] = permission ; //permission
+
+   returnval = 0; //successfully created
+endif;
+
+//delete
+if (syscallno == 4) then
+
+ //get index of the file
+ alias i R3;
+ i = 0;
+ while (i < 60) do
+  if ([INODE_TABLE + i * 16 + 1] == filename) then
+   break;
+  endif;
+  i = i + 1;
+ endwhile;
+
+ //if file is already not there
+ if (i == 60) then
+ returnval = 0; //file is not present
+  goto label1;
+ endif;
+ 
+ // if file type is not data file
+ if ([INODE_TABLE + i * 16] != 2) then
+  returnval = -1; //file is not data type
+  goto label1;
+ endif;
+
+ //if exclusive permission is set
+ alias userId R4;
+ userId = [PTentry + 3];
+ if ([INODE_TABLE + i * 16 + 4] == 0) then
+  //check if the file is not owned by root and the current user
+  if (([ROOT_FILE + i * 8 + 2] != 1) && ([ROOT_FILE + i * 8 + 4] != [ROOT_FILE + userId * 8 + 4])) then
+   returnval = -1; //permission not granted
+   goto label1;
+  endif;
+ endif;
+
+ //calling acquire inode from resource manager
+ R8 = i;
+ multipush(R0,R1,R2,R3,R4,R14);
+  R1 = 4;
+  R2 = R8;
+  R3 = [SYSTEM_STATUS_TABLE +1];
+  call MOD_0;
+  R7 = R0;
+ multipop(R0,R1,R2,R3,R4);
+
+ //check if any other process has kept the file open or not
+ if ([FILE_STATUS_TABLE + i * 4 + 1] != -1) then
+  returnval = -2; //file is open so cannot be deleted
+  goto label1;
+ endif;
+
+ //check if any block is loaded into the buffer and the dirty bit is set or not, to release the block or not
+ alias inodeIndex R6;
+ inodeIndex = i;
+ i = 0; 
+ alias j R5;
+ j = 0; 
+ while (i < 4) do
+  while (j < 4) do
+   if ([INODE_TABLE + inodeIndex * 16 + 8 + i] != -1) then
+    if (([BUFFER_TABLE + j * 4] == [INODE_TABLE + inodeIndex * 16 + 8 + i]) && ([BUFFER_TABLE + 4 * j + 1] == 1)) then
+     [BUFFER_TABLE + j * 4 + 1] = 0; //reset the dirty bit
+    endif;
+    //release the block from memory manager module
+    R8 = [INODE_TABLE + inodeIndex * 16 + 8 + i];
+    multipush(R0,R1,R2,R3,R4,R5,R6,R14);
+     R1 = 4;
+     R2 = R8;
+     R3 = [SYSTEM_STATUS_TABLE + 1];
+     call MOD_2;
+    multipop(R0,R1,R2,R3,R4,R5,R6);
+   endif;
+   j = j + 1;
+  endwhile;
+  i = i + 1;
+ endwhile;'
+
+ //invalidate entry in inode table
+ [INODE_TABLE + 16 * inodeIndex + 1] = -1; //file name
+
+ //invalidate the root file
+ [INODE_TABLE + 8 * inodeIndex] = -1;
+
+ //release inode from resource management module
+ R8 = inodeIndex;
+ multipush(R0,R1,R2,R3,R4,R14);
+  R1 = 5;
+  R2 = R8;
+  R3 = [SYSTEM_STATUS_TABLE +1];
+  call MOD_0;
+ multipop(R0,R1,R2,R3,R4);
+
+ returnval = 0; //successfully deleted
+ 
+endif; 
+
+label1:
+[PTentry + 9] = 0;
+SP = userSP ;
+ireturn;

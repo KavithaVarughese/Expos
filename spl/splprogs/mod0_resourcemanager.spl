@@ -18,6 +18,62 @@ if (functNo == 3) then
  [DISK_STATUS_TABLE + 4] = PID;
 endif;
 
+//Acquire Inode
+if (functNo == 4) then
+ alias inodeIndex R2;
+ alias pid R3;
+
+ //check if file is free or not 
+ while ([FILE_STATUS_TABLE + inodeIndex * 4] != -1) do
+  [PROCESS_TABLE + pid * 16 + 4] = WAIT_FILE;
+  [PROCESS_TABLE + pid * 16 + 5] = inodeIndex;
+
+  //meanwhile call scheduler
+  multipush(R1,R2,R3);
+   call MOD_5;
+  multipop(R1,R2,R3);
+ endwhile;
+
+ //check if inode entry is invalid
+ if ([INODE_TABLE + inodeIndex * 16 + 1] == -1) then
+  R0 = -1; // file already deleted by the time acquired
+  return;
+ endif;
+
+ //update file status table on acquiring the inode table
+ [FILE_STATUS_TABLE + inodeIndex * 4] = pid;
+
+ R0 = 0;
+
+endif;
+
+//Release Inode
+if (functNo == 5) then
+ alias inodeIndex R2;
+ alias pid R3;
+ 
+ //check if the genuine process called this 
+ if ([FILE_STATUS_TABLE + inodeIndex * 4] != pid) then
+  R0 = -1;
+  return;
+ endif; 
+
+ //invalidate the locking pid in file status table
+ [FILE_STATUS_TABLE + inodeIndex * 4] = -1;
+ 
+ //changing state to ready for all the processes waiting for this
+ alias i R4;
+ i = 1;
+ while (i < 16) do 
+  if (([PROCESS_TABLE + 16 * i + 4] == WAIT_FILE) && ([PROCESS_TABLE + 16 * i + 5] == inodeIndex)) then
+   [PROCESS_TABLE + 16 * i + 4] = READY;
+   [PROCESS_TABLE + 16 * i + 5] = -1;
+  endif;
+  i = i + 1;
+ endwhile;
+
+ R0 = 0; //success
+endif;
 //Aquire semaphore
 if (functNo == 6) then
  alias PID R2;

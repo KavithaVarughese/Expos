@@ -1,5 +1,5 @@
 load --os ../spl/splprogs/os_startup.xsm
-load --init ../expl/explprogs/fork2.xsm
+load --init ../expl/explprogs/shell2.xsm
 load --int=10 ../spl/splprogs/int10_haltprog.xsm
 load --exhandler ../spl/splprogs/exception_handler.xsm
 load --library ../expl/library.lib
@@ -21,3 +21,4 @@ load --int=11 ../spl/splprogs/int11_waitsig.xsm
 load --int=15 ../spl/splprogs/int15_shutdown.xsm
 load --int=13 ../spl/splprogs/int13_semgetrel.xsm
 load --int=14 ../spl/splprogs/int14_semlocksys.xsm
+load --int=4 ../spl/splprogs/int4_filesystem.xsm

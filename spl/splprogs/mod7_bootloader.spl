@@ -14,6 +14,10 @@ loadi(7,20);
 loadi(8,21);
 loadi(9,22);
 
+//load int4_create,delete files
+loadi(10,23);
+loadi(11,24);
+
 //load int6_read
 loadi(14,27);
 loadi(15,28);
@@ -76,7 +80,9 @@ loadi(60,4);
 
 //load disk free list
 loadi(61,2);
-loadi(62,3);
+
+//root file
+loadi(62,5);
 
 //load library
 loadi(63,13);
@@ -86,12 +92,6 @@ loadi(64,14);
 
 loadi(65,7);
 loadi(66,8);
-
-
-//even number
-loadi(83,70);
-//prime numbers
-loadi(86,72);
 
 //setting up page table for init
 
@@ -121,6 +121,7 @@ PTLR = 10;  //size of page table
 
 //setting up process table for init
 [PROCESS_TABLE + 16 + 1] = 1; //PID
+[PROCESS_TABLE + 16 + 3] = 1; //userId
 [PROCESS_TABLE + 16 + 4] = CREATED;
 [PROCESS_TABLE + 16 + 11] = 80; //userArea Page
 [PROCESS_TABLE + 16 + 12] = 0;
@@ -163,44 +164,22 @@ while (i < 32) do
  i = i + 1;
 endwhile;
 
-//odd numbers
+//setting up file status table
+i = 0;
+while (i < 60) do
+ [FILE_STATUS_TABLE + i * 4] = -1; //locking pid
+ [FILE_STATUS_TABLE + i * 4 + 1] = -1; //file open count
+ i = i + 1;
+endwhile;
 
-PTBR = PAGE_TABLE_BASE+40; //PTBR for init process
-PTLR = 10;  //size of page table
-
-[PTBR+0] = 63; //library
-[PTBR+1] = "0100"; //auxillary information
-[PTBR+2] = 64;
-[PTBR+3] = "0100";
-[PTBR+4] = -1; //heap pages
-[PTBR+5] = "0000";
-[PTBR+6] = -1;
-[PTBR+7] = "0000";
-[PTBR+8] = 83; //code pages
-[PTBR+9] = "0100";
-[PTBR+10] = -1;
-[PTBR+11] = "0100";
-[PTBR+12] = -1;
-[PTBR+13] = "0100";
-[PTBR+14] = -1;
-[PTBR+15] = "0100";
-[PTBR+16] = 84; //stack pages
-[PTBR+17] = "0110";
-[PTBR+18] = -1;
-[PTBR+19] = "0110";
-
-//setting up process table for init
-[PROCESS_TABLE + 16*2 + 1] = 2; //PID
-[PROCESS_TABLE + 16*2 + 4] = CREATED;
-[PROCESS_TABLE + 16*2 + 11] = 85; //userArea Page
-[PROCESS_TABLE + 16*2 + 12] = 0;
-[PROCESS_TABLE + 16*2 + 13] = 8*512;
-[PROCESS_TABLE + 16*2 + 14] = PTBR;
-[PROCESS_TABLE + 16*2 + 15] = PTLR;
-
-//Note the PTBR and PTLR are already initialised on line 67 and 68
-
-[84*512] = [83*512 + 1]; //stack hold the ip address of the next instructions of init process
+//setting up buffer table 
+i = 0;
+while (i < 4) do
+ [BUFFER_TABLE + i * 4] = -1; //block number
+ [BUFFER_TABLE + i * 4 + 1] = 0; //dirty bit
+ [BUFFER_TABLE + i * 4 + 2] = -1; //locking pid
+ i = i + 1;
+endwhile;
 
 [PROCESS_TABLE + 16*2 + 4] = TERMINATED;
 [PROCESS_TABLE + 16*3 + 4] = TERMINATED;
@@ -226,7 +205,7 @@ PTLR = 10;  //size of page table
 //initializing mem free list
 i = 0;
 
-while (i < 86) do //technically should be till 69, but we are already usign till 72 at the present stage
+while (i < 83) do //technically should be till 76, but we are already assigned till 80 at the present stage
  [MEMORY_FREE_LIST + i] = 1;
  i = i + 1;
 endwhile;
