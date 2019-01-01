@@ -22,7 +22,6 @@ endif;
 if (functNo == 4) then
  alias inodeIndex R2;
  alias pid R3;
-
  //check if file is free or not 
  while ([FILE_STATUS_TABLE + inodeIndex * 4] != -1) do
   [PROCESS_TABLE + pid * 16 + 4] = WAIT_FILE;
@@ -51,7 +50,7 @@ endif;
 if (functNo == 5) then
  alias inodeIndex R2;
  alias pid R3;
- 
+
  //check if the genuine process called this 
  if ([FILE_STATUS_TABLE + inodeIndex * 4] != pid) then
   R0 = -1;
