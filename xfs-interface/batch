@@ -22,3 +22,5 @@ load --int=15 ../spl/splprogs/int15_shutdown.xsm
 load --int=13 ../spl/splprogs/int13_semgetrel.xsm
 load --int=14 ../spl/splprogs/int14_semlocksys.xsm
 load --int=4 ../spl/splprogs/int4_filesystem.xsm
+load --module 3 ../spl/splprogs/mod3_filemanager.xsm
+load --int=5 ../spl/splprogs/int5_opcl.xsm

@@ -3,33 +3,154 @@
 alias userSP R0; 
 userSP = SP;
 
-[PROCESS_TABLE + ([SYSTEM_STATUS_TABLE + 1] * 16) + 13] = SP;
+alias PTentry R3;
+PTentry = PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16;
 
-SP = [PROCESS_TABLE + ([SYSTEM_STATUS_TABLE + 1] * 16) + 11] * 512 - 1;
+[PTentry + 13] = SP;
+
+SP = [PTentry + 11] * 512 - 1;
+
+alias retval R2;
+retval = [[PTBR + ((userSP - 1) / 512) * 2] * 512 + ((userSP -1) % 512)];
 
 alias fileDescriptor R1 ; // Argument 1
 fileDescriptor = [[PTBR + ((userSP - 4) / 512) * 2] * 512 + ((userSP - 4) % 512)];
 
 if (fileDescriptor != -1) then
- //unsuccessful
- [[PTBR + ((userSP - 1) / 512) * 2] * 512 + ((userSP -1) % 512)] = -1;
+ //file descripter, read from the file
+ 
+ //check if file descriptor is valid i.e (0 - 7) , which is also the entry of per process table
+ if ((fileDescriptor < 0) || (fileDescriptor > 7)) then
+  retval = -1;
+  goto label;
+ endif;
+
+ //if the entry in per process table is invalid or not a file
+ if ([[PTentry + 11] * 512 + 496 + (fileDescriptor * 2)] != 0) then
+  retval = -1;
+  goto label;
+ endif;
+
+ //get open file table index
+ alias OTindex R4;
+ OTindex = [[PTentry + 11] * 512 + 496 + (fileDescriptor * 2) + 1];
+
+ //get inode table index from open file table
+ alias INindex R5;
+ INindex = [OPEN_FILE_TABLE + OTindex * 4];
+
+ //call acquire inode from resource manager
+ R8=INindex;
+ multipush(R0,R1,R2,R3,R4,R5);
+  R1 = 4;
+  R2 = R8;
+  R3 = [SYSTEM_STATUS_TABLE + 1];
+  call MOD_0;
+  R7 = R0;
+ multipop(R0,R1,R2,R3,R4,R5);
+ 
+ //if acquiring fails return -1
+ if (R7 == -1) then
+  retval = -1;
+  goto label;
+ endif;
+
+ //get the Lseek from the open file table
+ alias Lseek R6;
+ Lseek = [OPEN_FILE_TABLE + OTindex * 4 + 2];
+
+ //get the word address now .. get physical addredd from logical address
+ alias wordAddr R15;
+ wordAddr = [[PTBR + ((userSP - 3) / 512) * 2] * 512 + ((userSP - 3) % 512)];
+
+ //if file corresponds to root file
+ if (INindex == INODE_ROOT) then
+  //if lseek value is equal to root file size which is 480
+  if (Lseek == 480) then
+   //release inode from resource manager
+   R8 = INindex;
+   multipush(R0,R1,R2,R3,R4,R5,R6,R15);
+    R1 = 5;
+    R2 = R8;
+    R3 = [SYSTEM_STATUS_TABLE + 1];
+    call MOD_0;
+   multipop(R0,R1,R2,R3,R4,R5,R6,R15);
+
+   //return -2;
+   retval = -2;
+   goto label;
+  
+  else
+   //read from Lseek position of root file to translated address
+   wordAddr = [ROOT_FILE + Lseek];
+
+   //increment Lseek position in open file table
+   [OPEN_FILE_TABLE + OTindex * 4 + 2] = [OPEN_FILE_TABLE + OTindex * 4 + 2] + 1; 
+  endif;
+ 
+ else
+  if (Lseek == 480) then
+   //release inode from resource manager
+   R8 = INindex;
+   multipush(R0,R1,R2,R3,R4,R5,R6,R15);
+    R1 = 5;
+    R2 = R8;
+    R3 = [SYSTEM_STATUS_TABLE + 1];
+    call MOD_0;
+   multipop(R0,R1,R2,R3,R4,R5,R6,R15);
+
+   //return -2;
+   retval = -2;
+   goto label;
+
+  else
+   //find disk block number and position to read from
+   alias blockIndex R14;
+   blockIndex = Lseek / 512 ;
+   alias DiskBlock R13;
+   DiskBlock = [INODE_TABLE + INindex * 16 + 8 + blockIndex];
+   alias Offset R12;
+   Offset = Lseek % 512;
+
+   //call buffered read from file manager
+   multipush(R0,R1,R2,R3,R4,R5,R6);
+    R1 = 2;
+    R2 = DiskBlock;
+    R3 = Offset;
+    R4 = wordAddr;
+    call MOD_3;
+   multipop(R0,R1,R2,R3,R4,R5,R6);
+
+   [OPEN_FILE_TABLE + OTindex * 4 + 2] = [OPEN_FILE_TABLE + OTindex * 4 + 2] + 1;
+  endif;
+
+  //release lock on inode index
+  R8 = INindex; 
+  multipush(R0,R1,R2,R3,R4,R5,R6,R15);
+   R1 = 5;
+   R2 = R8;
+   R3 = [SYSTEM_STATUS_TABLE + 1];
+   call MOD_0;
+  multipop(R0,R1,R2,R3,R4,R5,R6,R15);
+ endif;
 
 else
- //get the word
+ //get the word to directly print to terminal
  alias wordAddr R1;
  wordAddr = [[PTBR + ((userSP - 3) / 512) * 2] * 512 + ((userSP - 3) % 512)];
 
- multipush(R0,R1);
+ multipush(R0,R1,R2,R3);
  R1 = 4; //function number
  R2 = [SYSTEM_STATUS_TABLE + 1]; //PID
  R3 = [[PTBR + ((userSP - 3) / 512) * 2] * 512 + ((userSP - 3) % 512)]; //the wordAddr
  call MOD_4;
- multipop(R0,R1);
+ multipop(R0,R1,R2,R3);
 
 //successful , so return value is 0
- [[PTBR + ((userSP - 1) / 512) * 2] * 512 + ((userSP -1) % 512)] = 0; 
+ retval = 0; 
 endif;
 
+label:
 SP = userSP;
 
 [PROCESS_TABLE + ([SYSTEM_STATUS_TABLE + 1] * 16) + 9] = 0;

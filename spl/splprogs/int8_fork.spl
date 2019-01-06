@@ -113,7 +113,13 @@ while (i < 8) do
  // if the process is semaphore
  if ([[ChildProcessTable + 11] * 512 + 496 + i] == 1) then
   //increment process count
-  [SEMAPHORE_TABLE + i * 4 + 1] = [SEMAPHORE_TABLE + i * 4 + 1] + 1; 
+  [SEMAPHORE_TABLE + [[ChildProcessTable + 11] * 512 + 496 + i + 1] * 4 + 1] = [SEMAPHORE_TABLE + [[ChildProcessTable + 11] * 512 + 496 + i + 1] * 4 + 1] + 1; 
+ endif;
+ 
+ //if its a file
+ if ([[ChildProcessTable + 11] * 512 + 496 + i] == 0) then
+  //increment process count
+  [OPEN_FILE_TABLE + [[ChildProcessTable + 11] * 512 + 496 + i + 1] * 4 + 1] = [OPEN_FILE_TABLE + [[ChildProcessTable + 11] * 512 + 496 + i + 1] * 4 + 1] + 1; 
  endif;
  
  i = i + 1;

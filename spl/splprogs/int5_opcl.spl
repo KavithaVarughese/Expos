@@ -1,0 +1,97 @@
+alias userSP R0; 
+userSP = SP;
+
+alias PTentry R1;
+PTentry = PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16;
+
+[PTentry + 13] = SP;
+
+SP = [PTentry + 11] * 512 - 1;
+
+alias returnval R2;
+returnval = [[PTBR + ((userSP - 1) / 512) * 2] * 512 + ((userSP - 1) % 512)];
+
+alias syscallno R3;
+syscallno = [[PTBR + ((userSP - 5) / 512) * 2] * 512 + ((userSP - 5) % 512)];
+
+[PTentry + 9] = syscallno;
+
+//open
+if (syscallno == 2) then
+ //find index in per process resource table
+ alias i R4;
+ i = 0;
+ alias PPTindex R5;
+ while (i < 8) do
+  if ([[PTentry + 11] * 512 + 496 + (i * 2)] == -1) then
+   PPTindex = i;
+   break;
+  endif;
+  i = i + 1;
+ endwhile;
+
+ //if no free entry in perprocess resource table
+ if (i == 8) then
+  returnval = -3;
+  goto label;
+ endif;
+
+ // call open() from file manager module
+ R8 = userSP;
+ multipush(R0,R1,R2,R3,R4,R5);
+  R1 = 3;
+  R2 = [[PTBR + ((R8 - 4) / 512) * 2] * 512 + ((R8 - 4) % 512)];
+  call MOD_3;
+  R7 = R0;
+ multipop(R0,R1,R2,R3,R4,R5);
+  
+ //if open() fails
+ if ((R7 == -1) || (R7 == -2)) then
+  returnval= R7;
+  goto label;
+ endif;
+ 
+ //update per process resource table
+ [[PTentry + 11] * 512 + 496 + (PPTindex * 2)] = 0;
+ [[PTentry + 11] * 512 + 496 + (PPTindex * 2) + 1] = R7; //open file table index
+
+ //return index of per process table 
+ R0 = PPTindex;  
+endif;
+ 
+//close
+if (syscallno == 3) then
+ alias fileDesc R4;
+ fileDesc = [[PTBR + ((userSP - 4) / 512) * 2] * 512 + ((userSP - 4) % 512)];
+
+ //check if fileDesc is valid or not
+ if ((fileDesc < 0) || (fileDesc > 7)) then
+  returnval = -1;
+  goto label;
+ endif;
+
+ //if  per process resource table is invalid or not in file mode
+ if ([[PTentry + 11] * 512 + 496 + (fileDesc * 2)] != 0) then
+  returnval = -1;
+  goto label;
+ endif; 
+
+ //call close() from file manager module
+ R8 = fileDesc;
+ R9 = PTentry;
+ multipush(R0,R1,R2,R3,R4);
+  R1 = 4;
+  R2 = [[R9 + 11] * 512 + 496 + (R8 * 2) + 1];
+  call MOD_3;
+ multipop(R0,R1,R2,R3,R4);
+
+ //invalidate per process table entry
+ [[PTentry + 11] * 512 + 496 + (fileDesc * 2)] = -1;
+
+ returnval = 0;
+endif;
+
+label:
+userSP = SP;
+[PTentry + 9] = 0;
+return;

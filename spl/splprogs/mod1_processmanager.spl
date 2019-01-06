@@ -27,20 +27,32 @@ endif;
 //Free User Area Page
 if (functNo == 2) then
 
- //for every valid entry in per process table decrement process count
+ //check open instances of files and semaphores and release them before invalidating
  alias i R3;
  i = 0;
  while (i < 8) do
   //semphore table 
-  if ([[PROCESS_TABLE + pid * 16 + 11] * 512 + 496 + i] == 1) then
+  if ([[PROCESS_TABLE + pid * 16 + 11] * 512 + 496 + (i * 2)] == 1) then
    //call release semaphore from resource manager
-   R8 = i;
+   R8 = [[PROCESS_TABLE + pid * 16 + 11] * 512 + 496 + (i * 2) + 1];
    multipush(R1,R2,R3);
     R1 = 7;
     R2 = R8;
     R3 = [SYSTEM_STATUS_TABLE + 1];
     call MOD_0;
     R7 = R0;
+   multipop(R1,R2,R3);
+
+  endif;
+
+  //open file table 
+  if ([[PROCESS_TABLE + pid * 16 + 11] * 512 + 496 + (i * 2)] == 0) then
+   //call close from file manager
+   R8 = [[PROCESS_TABLE + pid * 16 + 11] * 512 + 496 + (i * 2) + 1];
+   multipush(R1,R2,R3);
+    R1 = 4;
+    R2 = R8;
+    call MOD_3;
    multipop(R1,R2,R3);
 
    //invalidate resource table entry
