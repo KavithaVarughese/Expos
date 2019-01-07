@@ -11,6 +11,7 @@ systemcallno = [[PTBR + ((userSP - 5) / 512) * 2] * 512 + ((userSP - 5) % 512)];
 
 //semget
 if(systemcallno == 17) then
+
  //find free entry in per process resource table
  alias i R3;
  i = 0;
@@ -50,10 +51,12 @@ if(systemcallno == 17) then
  [[PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16 + 11] * 512 + 496 + i + 1] = R7; // index in the semaphore table 
  
  R0 = i; // return the per process table index as the semaphore descriptor
+
 endif;
  
 //semrelease
 if(systemcallno == 18) then
+
  alias semdesc R3;
  semdesc = [[PTBR + ((userSP - 4) / 512) * 2] * 512 + ((userSP - 4) % 512)]; 
 
@@ -79,6 +82,7 @@ if(systemcallno == 18) then
  [[PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16 + 11] * 512 + 496 + semdesc] = -1;
  
  R0 = 0;
+
 endif;
 
 [PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16 + 9] = 0;

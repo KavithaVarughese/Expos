@@ -11,23 +11,24 @@ PTentry = PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16;
 SP = [PTentry + 11] * 512 - 1;
 
 alias retval R2;
-retval = [[PTBR + ((userSP - 1) / 512) * 2] * 512 + ((userSP -1) % 512)];
+retval = [PTBR + ((userSP - 1) / 512) * 2] * 512 + ((userSP -1) % 512);
 
 alias fileDescriptor R1 ; // Argument 1
 fileDescriptor = [[PTBR + ((userSP - 4) / 512) * 2] * 512 + ((userSP - 4) % 512)];
 
 if (fileDescriptor != -1) then
+
  //file descripter, read from the file
- 
+
  //check if file descriptor is valid i.e (0 - 7) , which is also the entry of per process table
  if ((fileDescriptor < 0) || (fileDescriptor > 7)) then
-  retval = -1;
+  [retval] = -1;
   goto label;
  endif;
 
  //if the entry in per process table is invalid or not a file
  if ([[PTentry + 11] * 512 + 496 + (fileDescriptor * 2)] != 0) then
-  retval = -1;
+  [retval] = -1;
   goto label;
  endif;
 
@@ -51,7 +52,7 @@ if (fileDescriptor != -1) then
  
  //if acquiring fails return -1
  if (R7 == -1) then
-  retval = -1;
+  [retval] = -1;
   goto label;
  endif;
 
@@ -77,19 +78,20 @@ if (fileDescriptor != -1) then
    multipop(R0,R1,R2,R3,R4,R5,R6,R15);
 
    //return -2;
-   retval = -2;
+   [retval] = -2;
    goto label;
-  
+
   else
    //read from Lseek position of root file to translated address
-   wordAddr = [ROOT_FILE + Lseek];
+   [[PTBR + ((wordAddr) / 512) * 2] * 512 + ((wordAddr) % 512)] = [ROOT_FILE + Lseek];
 
    //increment Lseek position in open file table
    [OPEN_FILE_TABLE + OTindex * 4 + 2] = [OPEN_FILE_TABLE + OTindex * 4 + 2] + 1; 
   endif;
  
  else
-  if (Lseek == 480) then
+  //if lseek is equal to file size
+  if (Lseek == [INODE_TABLE + INindex * 16 + 2]) then
    //release inode from resource manager
    R8 = INindex;
    multipush(R0,R1,R2,R3,R4,R5,R6,R15);
@@ -100,7 +102,7 @@ if (fileDescriptor != -1) then
    multipop(R0,R1,R2,R3,R4,R5,R6,R15);
 
    //return -2;
-   retval = -2;
+   [retval] = -2;
    goto label;
 
   else
@@ -146,11 +148,11 @@ else
  call MOD_4;
  multipop(R0,R1,R2,R3);
 
-//successful , so return value is 0
- retval = 0; 
+//successful , so return value is 0 
 endif;
-
+ [retval] = 0;
 label:
+ 
 SP = userSP;
 
 [PROCESS_TABLE + ([SYSTEM_STATUS_TABLE + 1] * 16) + 9] = 0;

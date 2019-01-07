@@ -2,6 +2,7 @@ alias functNo R1;
 
 //Acquire buffer
 if (functNo == 1) then
+
  alias bfno R2;
  alias pid R3;
   
@@ -18,10 +19,12 @@ if (functNo == 1) then
 
  //lock the buffer
  [BUFFER_TABLE + bfno * 4 + 2] = pid;
+
 endif;
 
 //release buffer
 if (functNo == 2) then
+
  alias bfno R2;
  alias pid R3;
 
@@ -44,10 +47,12 @@ if (functNo == 2) then
   i = i + 1;
  endwhile; 
  R0 = 0;
+
 endif;
 
 //Acquire Disk
 if (functNo == 3) then
+
  alias PID R2;
 
  while ([DISK_STATUS_TABLE] == 1) do
@@ -62,10 +67,12 @@ if (functNo == 3) then
 
  [DISK_STATUS_TABLE] = 1;
  [DISK_STATUS_TABLE + 4] = PID;
+
 endif;
 
 //Acquire Inode
 if (functNo == 4) then
+
  alias inodeIndex R2;
  alias pid R3;
  //check if file is free or not 
@@ -94,6 +101,7 @@ endif;
 
 //Release Inode
 if (functNo == 5) then
+
  alias inodeIndex R2;
  alias pid R3;
 
@@ -118,9 +126,12 @@ if (functNo == 5) then
  endwhile;
 
  R0 = 0; //success
+
 endif;
+
 //Aquire semaphore
 if (functNo == 6) then
+
  alias PID R2;
 
  // getting free entry in semaphore table, free entry means process count is 0
@@ -141,10 +152,12 @@ if (functNo == 6) then
  //set the semaphore table for that entry
  [SEMAPHORE_TABLE + 4 * i + 1] = 1; //process count
  [SEMAPHORE_TABLE + 4 * i] = -1; // semaphore is not locked
+
 endif;
 
 //Release semaphore
 if (functNo == 7) then
+
  alias semIndex R2;
  alias pid R3;
 
@@ -169,10 +182,12 @@ if (functNo == 7) then
  endwhile; 
 
  R0 = 0; //indicating success
+
 endif;
 
 //Acquire Terminal
 if (functNo == 8) then
+
  alias PID R2;
 
  //check if the terminal is free or not
@@ -187,11 +202,13 @@ if (functNo == 8) then
 
  // successfully gained control over terminal
  [TERMINAL_STATUS_TABLE] = 1;
- [TERMINAL_STATUS_TABLE + 1] = PID; 
+ [TERMINAL_STATUS_TABLE + 1] = PID;
+ 
 endif; 
 
 //Release Terminal
 if (functNo == 9) then
+
  alias PID R2;
 
  //check whether the process who is releasing is the one who acquired it
@@ -214,6 +231,7 @@ if (functNo == 9) then
  endwhile;
 
  R0 = 0; //success!
+
 endif;
 
 return;

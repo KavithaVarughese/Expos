@@ -2,6 +2,7 @@ alias functNo R1;
 
 //buffered read
 if (functNo == 2) then
+
  alias DB R2;
  alias offset R3;
  alias MA R4;
@@ -54,7 +55,8 @@ if (functNo == 2) then
  endif;
 
  //copy contents from the offset position of the buffer page to the translated address
- MA = [(71 + buffer) * 512 + offset];
+
+ [[PTBR + ((MA) / 512) * 2] * 512 + ((MA) % 512)] = [(71 + buffer) * 512 + offset];
 
  //release buffer invoked from resource manager
  R8 = buffer;
@@ -69,15 +71,16 @@ endif;
 
 //open
 if (functNo == 3) then
+
  alias filename R2;
  
  //get the inode index for filename 
  alias i R3;
  i = 0;
  while (i < 60) do
-  if ([PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16 + 1] == filename) then
+  if ([INODE_TABLE + i * 16 + 1] == filename) then
    break;
-  endif;
+  endif; 
   i = i + 1;
  endwhile;
 
@@ -153,7 +156,7 @@ if (functNo == 3) then
   endif;
   [OPEN_FILE_TABLE + OTindex * 4] = i; //inode index number
  endif;
- 
+
  //update rest of open file table
  [OPEN_FILE_TABLE + OTindex * 4 + 1] = 1;
  [OPEN_FILE_TABLE + OTindex * 4 + 2] = 0;
@@ -168,10 +171,12 @@ if (functNo == 3) then
  multipop(R1,R2,R3,R4);
 
  R0 = OTindex;
+
 endif;
 
 //close
 if (functNo == 4) then
+
  alias OTindex R2; 
  
  //get inode table index from open file table
@@ -197,7 +202,7 @@ if (functNo == 4) then
    endif;
   endif;
  endif; 
- 
+
 endif;
 
 return;
