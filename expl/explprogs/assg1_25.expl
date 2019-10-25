@@ -1,0 +1,40 @@
+decl
+ str filename;
+enddecl
+int main()
+{
+decl
+          int temp, x, filedisone, filedistwo, semid, iter,a,data,offset;
+enddecl
+begin
+
+         read(filename);
+         read(iter);
+         temp=exposcall("Create",filename,iter);
+         filedisone = exposcall("Open",filename);
+         filedistwo = exposcall("Open","1100.dat");
+         a=0;
+         offset=1099;
+         if(filedistwo!=-1) then
+         while(a != -2)do
+         a = exposcall("Read",filedistwo,data);
+         if(a!=-2) then
+ 	 temp = exposcall("Write",filedisone,data);
+         endif;
+	 endwhile;
+	 endif;
+         filedisone = exposcall("Close",filedisone);
+         temp=0;
+         while(temp != -2)do
+         filedisone = exposcall("Open",filename);
+         temp=exposcall("Seek",filedisone,offset);
+	 a = exposcall("Read",filedisone,data);
+ 	if(temp!=-2) then
+ 	temp = exposcall("Write",-2,data);
+ 	endif;
+        filedisone = exposcall("Close",filedisone);
+        offset=offset-1;
+	endwhile;
+         return 0;
+end
+}
